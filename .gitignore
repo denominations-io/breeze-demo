@@ -1,0 +1,7 @@
+.class
+*.log
+.history
+*.jar
+target
+.idea/*
+spark-warehouse
