@@ -1,6 +1,3 @@
-package logit
-package tooling
-
 import breeze.linalg._
 import org.apache.spark.ml.feature.LabeledPoint
 

@@ -1,6 +1,3 @@
-package logit
-package models
-
 import breeze.linalg._
 import breeze.numerics._
 import breeze.optimize._
@@ -9,9 +6,7 @@ import breeze.util._
 import org.apache.spark.sql._
 import org.apache.spark.ml.feature.LabeledPoint
 
-import learning._
-import tooling._
-import optimizers._
+import logit.optimizers._
 
 /**
   * Estimate the logistic function through adaptive gradient descent (Duchi et al., 2010).
@@ -21,10 +16,13 @@ import optimizers._
   * with R(b) the L2 regularization term R(b) = sum (pow(b,2)) for all n observations.
   */
 
-class LogisticRegressionWithAdaGrad(spark: SparkSession, data: Dataset[LabeledPoint]) extends Model
+class LogisticRegressionWithAdaGrad(spark: SparkSession, data: Dataset[LabeledPoint]) extends Regression
+  with ModelEvaluation
   with FeatureSpace
   with AdaGradOptimizer
   with SerializableLogging {
+
+  val modelProperties = Model("Logistic Regression with AdaGrad")
 
   val numFeatures = data.take(1).map { _.features.size }.head
   val numObservations = data.count()
@@ -54,16 +52,26 @@ class LogisticRegressionWithAdaGrad(spark: SparkSession, data: Dataset[LabeledPo
   val optimizedParameters = optimizeAGD(regression, DenseVector.zeros[Double](numFeatures))
   logger.info(s"Parameter estimates after optimization: ${optimizedParameters.toString}")
 
-  override def estimate: DenseVector[Double] = optimizedParameters  // TODO: compute the p values of the coefficients
-  override def predict = { holdOut: Dataset[LabeledPoint] =>
+  // TODO: compute the p values of the coefficients
+  override def estimate = {
+    val fit = Some(ModelFit("AIC", 1200))
+    val coefficients =
+      Some(optimizedParameters
+        .data.map(p => Estimate("a", p, 0.0)).sortBy(-_.probability))
+    modelProperties.copy(modelFit = fit, parameterEstimates = coefficients)
+  }
+
+  override def evaluation = { holdOut: Dataset[LabeledPoint] =>
+
     val predictions = holdOut.collect().map { lp =>
       val features = new breeze.linalg.DenseVector[Double](lp.features.toArray)
       val evaluation = sigmoid(sum(features :* optimizedParameters))
-      val prediction: Double = evaluation / (1 + evaluation)   // TODO: intercept is missing
-      Prediction(prediction, lp.label)
+      val prediction: Double = evaluation / (1 + evaluation) // TODO: intercept is missing
+      Prediction(observed = lp.label, predicted = prediction)
     }
-    holdOut.sparkSession.createDataset(predictions)
+
+    val predictionDS = holdOut.sparkSession.createDataset(predictions)
+    evaluateBinaryModel(estimate, predictionDS)
   }
-  override def summarize: Summary = { Summary() }
 }
 

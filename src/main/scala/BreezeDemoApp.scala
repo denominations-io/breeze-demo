@@ -1,9 +1,5 @@
-import logit.learning.ModelEvaluation
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
-
-import logit.models._
-import logit.tooling._
 
 case class AppConfig(trainingData: String = "", holdoutSet: String = "", optimizer: String = "sgd")
 
@@ -45,12 +41,10 @@ object BreezeDemoApp extends DataReader with ModelEvaluation {
       // TODO: implement self learning to allow the app to iterate over all implemented model and parameter spaces
       if (app.optimizer.equals("adagrad")) {
         val customModel = new LogisticRegressionWithAdaGrad(spark, trainingData)
-        val predictions = customModel.predict(holdoutData)
-        evaluate(spark, predictions, colNames)
+        customModel.evaluation(holdoutData)
       } else {
         val mllibModel = new MLLibLogisticRegressionWithSGD(trainingData)
-        val predictions = mllibModel.predict(holdoutData)
-        evaluate(spark, predictions, colNames)
+        mllibModel.evaluation(holdoutData)
       }
     }
   }

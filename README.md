@@ -2,7 +2,7 @@
 
 demo app - machine learning in Scala with the Spark MLLib and ScalaNLP Breeze libraries. two different versions of a logistic regression are implemented using MLLib and Breeze.
 
-the wine quality data is part of the the UCI Machine Learning Repository, courtesy of Cortez et al. 2009. *Modeling wine preferences by data mining from physicochemical properties.* Decision Support Systems, 47(4):547-553.
+the Spambase development data used in this project was made available for public use through the UCI Machine Learning Repository.
 
 ## Dependencies
 

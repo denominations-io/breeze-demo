@@ -1,6 +1,3 @@
-package logit
-package tooling
-
 import breeze.util.SerializableLogging
 import org.apache.spark.ml.feature.LabeledPoint
 import org.apache.spark.mllib.linalg.Vectors
@@ -24,13 +21,13 @@ object SimpleStatistics extends SerializableLogging {
     val columnMeans = format(stats.mean)
     val columnVariances = format(stats.variance)
 
-    val summary =
+    val simpleStatistics =
       Array(
         s"number of observations: $observations",
         s"column means: \n $columnMeans",
         s"column variances: \n $columnVariances"
       ).mkString("\n")
-    logger.info(summary)
-    summary
+    logger.info(simpleStatistics)
+    simpleStatistics
   }
 }

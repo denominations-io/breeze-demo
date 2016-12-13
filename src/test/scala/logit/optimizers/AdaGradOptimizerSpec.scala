@@ -1,10 +1,8 @@
-package logit
-package optimizers
-
 import org.scalatest._
-
 import breeze.linalg._
 import breeze.optimize._
+
+import logit.optimizers._
 
 class AdaGradOptimizerSpec extends FlatSpec with Matchers with AdaGradOptimizer {
 
