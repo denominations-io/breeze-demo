@@ -1,17 +1,15 @@
 
-import org.apache.spark.sql._
-import org.apache.spark.ml.feature._
-
 trait Regression {
-  def estimate: Model
-  def evaluation: Dataset[LabeledPoint] => Evaluation
+  def description: String
+  def estimate: ModelSummary
+  def evaluate: Evaluation
 }
 
-case class Estimate(variableName: String, estimate: Double, probability: Double)
 case class ModelFit(metric: String, value: Double)
+case class Coefficient(variableName: String, estimate: Double, probability: Double)
 
-case class Model(
+case class ModelSummary(
                   name: String,
-                  modelFit: Option[ModelFit] = None,
-                  parameterEstimates: Option[Array[Estimate]] = None
+                  modelFit: ModelFit,
+                  coefficients: Array[Coefficient]
                 )

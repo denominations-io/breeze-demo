@@ -7,20 +7,20 @@ import breeze.stats.distributions._
 class LogisticRegressionWithAdaGradSpec extends FlatSpec with Matchers with DataReader {
 
   val spark = SparkSession.builder().master("local[2]").appName("test-breeze-adagrad").getOrCreate()
-  val (colNamesTrain, trainingData) = readCsv(spark, getClass.getResource("/train.csv").getPath)
+  val (colNames, trainingData) = readCsv(spark, getClass.getResource("/train.csv").getPath)
   val (colNamesDup, holdOutData) = readCsv(spark, getClass.getResource("/holdout.csv").getPath)
 
   "The LogisticRegressionWithAdaGrad" should
    "be able to estimate parameter coefficients using breeze.optimize.AdaptiveGradientDescent" in {
-      val model = new LogisticRegressionWithAdaGrad(spark, trainingData)
-      model.evaluation(holdOutData).evaluationSet shouldEqual 2101
+      val model = new LogisticRegressionWithAdaGrad(spark, colNames, trainingData, holdOutData)
+      model.evaluate.evaluationSet shouldEqual 2101
       // TODO: add more assertions; cross-validate the estimates.
 
   }
 
   it should "produce a correct gradient" in {
-    val model = new LogisticRegressionWithAdaGrad(spark, trainingData)
+    val model = new LogisticRegressionWithAdaGrad(spark, colNames, trainingData, holdOutData)
     GradientTester
-      .test[Int, DenseVector[Double]](model.regression, DenseVector.rand[Double](colNamesTrain.length, RandBasis.mt0.uniform)) // TODO: look into NaNs
+      .test[Int, DenseVector[Double]](model.regression, DenseVector.rand[Double](colNames.length, RandBasis.mt0.uniform)) // TODO: look into NaNs
   }
 }

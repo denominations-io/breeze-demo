@@ -4,54 +4,57 @@ import org.apache.spark.sql._
 
 case class Prediction(observed: Double, predicted: Double)
 
+// TODO: expand model evaluation suite
 trait ModelEvaluation extends FeatureSpace with EvaluationMetrics with SerializableLogging {
 
-  // TODO: expand model evaluation suite
-  def evaluateLinearModel(model: Model, predictions: Dataset[Prediction]): Evaluation = {
+  def evaluateLinearPredictions(model: ModelSummary, predictions: Dataset[Prediction]): Evaluation = {
     val rmse = computeRMSE(predictions)
     Evaluation(
-      modelName = model.name,
+      description = model.name,
       evaluationSet = predictions.count().toInt,
-      evaluation = Map("RMSE" -> rmse),
-      diagnostics = Map("convergence rate: " -> 0.04)
+      numVariables = model.coefficients.length,
+      evaluationMetrics = Map("RMSE" -> rmse, "R2" -> model.modelFit.value),
+      coefficients = model.coefficients
     )
   }
 
-  def evaluateBinaryModel(model: Model, predictions: Dataset[Prediction]): Evaluation = {
+  def evaluateBinaryPredictions(model: ModelSummary, predictions: Dataset[Prediction]): Evaluation = {
     val hitRate = computeHitRate(predictions)
+
    Evaluation(
-      modelName = model.name,
+      description = model.name,
       evaluationSet = predictions.count().toInt,
-      evaluation = Map(
+      numVariables = model.coefficients.length,
+      evaluationMetrics = Map(
         "True positives: " -> hitRate.truePositives,
         "False positives: " -> hitRate.falsePositives,
         "Hit rate (%): " -> hitRate.hitRate * 100
       ),
-      diagnostics = Map("convergence rate: " -> 0.04)
+     coefficients = model.coefficients
     )
   }
 }
 
 case class Evaluation(
-                       modelName: String = "",
+                       description: String = "",
                        evaluationSet: Int = 0,
-                       variables: Int = 0,
-                       evaluation: Map[String, Double] = Map.empty[String, Double],
-                       diagnostics: Map[String, Double] = Map.empty[String, Double]
+                       numVariables: Int = 0,
+                       evaluationMetrics: Map[String, Double] = Map.empty[String, Double],
+                       coefficients: Array[Coefficient]
                      ) extends SerializableLogging {
   def logSummary(): Unit = {
     logger.info(
       s"""
          |
-         |    $modelName
+         | -$description-
          | evaluation set size:   ${evaluationSet.toString}
-         | number of variables:   ${variables.toString}
+         | number of variables:   ${numVariables.toString}
          |
-         | -- predictive performance --
-         | ${evaluation.mkString("\n ")}
+         | -- evaluation metrics --
+         | ${evaluationMetrics.mkString("\n ")}
          |
-         | -- diagnostic information --
-         | ${diagnostics.mkString("\n ")}
+         | --   variable name   ||   coefficient   ||   p-value --
+         | ${coefficients.map { c => s"${c.variableName}  |  ${c.estimate}  |  ${c.probability}"}.mkString("\n ")}
        """.stripMargin
     )
   }

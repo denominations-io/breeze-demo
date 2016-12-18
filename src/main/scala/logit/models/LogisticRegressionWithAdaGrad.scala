@@ -16,22 +16,22 @@ import logit.optimizers._
   * with R(b) the L2 regularization term R(b) = sum (pow(b,2)) for all n observations.
   */
 
-class LogisticRegressionWithAdaGrad(spark: SparkSession, data: Dataset[LabeledPoint]) extends Regression
+class LogisticRegressionWithAdaGrad(spark: SparkSession, colNames: Array[String], training: Dataset[LabeledPoint], holdout: Dataset[LabeledPoint]) extends Regression
   with ModelEvaluation
   with FeatureSpace
   with AdaGradOptimizer
   with SerializableLogging {
 
-  val modelProperties = Model("Logistic Regression with AdaGrad")
+  override def description = "Logistic Regression with AdaGrad"
 
-  val numFeatures = data.take(1).map { _.features.size }.head
-  val numObservations = data.count()
+  val numFeatures = training.take(1).map { _.features.size }.head
+  val numObservations = training.count()
   logger.info(s"Found $numObservations observations of $numFeatures features.")
 
   import spark.implicits._
 
-  val labels = new DenseVector[Double](data.map(_.label).collect())
-  val featureSpace = featureMatrixFromLabeledPoint(numFeatures, data.collect())
+  val labels = new DenseVector[Double](training.map(_.label).collect())
+  val featureSpace = featureMatrixFromLabeledPoint(numFeatures, training.collect())
 
   def objectiveFunction(parameters: DenseVector[Double]): Double = {
     val quotient = featureSpace * parameters
@@ -49,29 +49,26 @@ class LogisticRegressionWithAdaGrad(spark: SparkSession, data: Dataset[LabeledPo
     def calculate(parameters: DenseVector[Double]) = (objectiveFunction(parameters), gradient(parameters))
   }
 
-  val optimizedParameters = optimizeAGD(regression, DenseVector.zeros[Double](numFeatures))
-  logger.info(s"Parameter estimates after optimization: ${optimizedParameters.toString}")
-
   // TODO: compute the p values of the coefficients
-  override def estimate = {
-    val fit = Some(ModelFit("AIC", 1200))
-    val coefficients =
-      Some(optimizedParameters
-        .data.map(p => Estimate("a", p, 0.0)).sortBy(-_.probability))
-    modelProperties.copy(modelFit = fit, parameterEstimates = coefficients)
+  def estimate = {
+    val optimizedParameters = optimizeAGD(regression, DenseVector.zeros[Double](numFeatures))
+    logger.info(s"Parameter estimates after optimization: ${optimizedParameters.toString}")
+
+    val fit = ModelFit("AIC", 0.0)
+    val estimates = optimizedParameters.data.zip(colNames).map(p => Coefficient(p._2, p._1, 0.0)).sortBy(-_.probability)
+    ModelSummary(description, fit, estimates)
   }
 
-  override def evaluation = { holdOut: Dataset[LabeledPoint] =>
-
-    val predictions = holdOut.collect().map { lp =>
+  val predict = { (coefficients: DenseVector[Double], holdOut: Dataset[LabeledPoint]) =>
+    holdOut.map { lp =>
       val features = new breeze.linalg.DenseVector[Double](lp.features.toArray)
-      val evaluation = sigmoid(sum(features :* optimizedParameters))
+      val evaluation = sigmoid(sum(features :* coefficients))
       val prediction: Double = evaluation / (1 + evaluation) // TODO: intercept is missing
       Prediction(observed = lp.label, predicted = prediction)
     }
-
-    val predictionDS = holdOut.sparkSession.createDataset(predictions)
-    evaluateBinaryModel(estimate, predictionDS)
   }
+
+  val parameterEstimates = DenseVector(estimate.coefficients.map { _.estimate })
+  def evaluate = evaluateBinaryPredictions(estimate, predict(parameterEstimates, holdout))
 }
 

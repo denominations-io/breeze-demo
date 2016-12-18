@@ -1,23 +1,19 @@
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
 
-case class AppConfig(trainingData: String = "", holdoutSet: String = "", optimizer: String = "sgd")
+case class AppConfig(dataSet: String = "", model: String = "logit-sgd")
 
 object BreezeDemoApp extends DataReader with ModelEvaluation {
   def main(args: Array[String]): Unit = {
 
-    val optimizer: Set[String] = Set("sgd", "adagrad")
+    val optimizer: Set[String] = Set("logit-sgd", "logit-adagrad", "linear-sgd")
 
     val parser = new scopt.OptionParser[AppConfig]("scopt") {
-      opt[String]("training").action((x, c) => c.copy(trainingData = x))
+      opt[String]("dataset").action((x, c) => c.copy(dataSet = x))
         .required()
         .validate(x => if (x.endsWith(".csv")) success else failure("Needs to be a .csv file"))
         .text("The file path of the training data should be specified as a string.")
-      opt[String]("holdout").action((x, c) => c.copy(holdoutSet = x))
-        .required() // TODO: make passing a holdout set optional
-        .validate(x => if (x.endsWith(".csv")) success else failure("Needs to be a .csv file"))
-        .text("The file path of the holdout set should be specified as a string.")
-      opt[String]("optimizer").action((x, c) => c.copy(optimizer = x))
+      opt[String]("optimizer").action((x, c) => c.copy(model = x))
         .validate(x => if (optimizer.contains(x)) success else failure(s"Optimizer $x not implemented"))
         .text("The optimizer should be specified as a string")
     }
@@ -34,17 +30,25 @@ object BreezeDemoApp extends DataReader with ModelEvaluation {
         .set("spark.executor.memory", "2g")
       val spark = SparkSession.builder().config(conf).getOrCreate()
 
-      // TODO: implement filter that allows the discarding of variables from the data
-      val (colNames, trainingData) = readCsv(spark, app.trainingData)
-      val (colNamesDup, holdoutData) = readCsv(spark, app.holdoutSet)
+      /** Load in the data and split into training and hold out data. */
+      val (colNames, data) = readCsv(spark, app.dataSet)
+      val splitData = data.randomSplit(Array(70, 30))
+      assert(splitData.length == 2)
 
-      // TODO: implement self learning to allow the app to iterate over all implemented model and parameter spaces
-      if (app.optimizer.equals("adagrad")) {
-        val customModel = new LogisticRegressionWithAdaGrad(spark, trainingData)
-        customModel.evaluation(holdoutData)
+      val trainingData = splitData(0)
+      val holdoutData = splitData(1)
+
+      // TODO: implement self-learning over model and parameter spaces
+      /** Estimate and evaluate the selected model. */
+      if (app.model.equals("logit-adagrad")) {
+        val logitAdaGrad = new LogisticRegressionWithAdaGrad(spark, colNames, trainingData, holdoutData)
+        logitAdaGrad.evaluate
+      } else if(app.model.equals("linear-sgd")) {
+        val linearSgd = new MLlibLinearRegressionWithSGD(colNames, trainingData, holdoutData)
+        linearSgd.evaluate
       } else {
-        val mllibModel = new MLLibLogisticRegressionWithSGD(trainingData)
-        mllibModel.evaluation(holdoutData)
+        val logitSgd = new MLlibLogisticRegressionWithSGD(colNames, trainingData, holdoutData)
+        logitSgd.evaluate
       }
     }
   }

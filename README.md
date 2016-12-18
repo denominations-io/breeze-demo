@@ -1,8 +1,8 @@
 ## Breeze demo app
 
-demo app - machine learning in Scala with the Spark MLLib and ScalaNLP Breeze libraries. two different versions of a logistic regression are implemented using MLLib and Breeze.
+demo app - machine learning in Scala with Spark MLlib and the ScalaNLP Breeze library.
 
-the Spambase data used in this project was made available for public use in the UCI Machine Learning Repository.
+the Spambase data set was made available for public use through the UCI Machine Learning Repository.
 
 ## Dependencies
 
