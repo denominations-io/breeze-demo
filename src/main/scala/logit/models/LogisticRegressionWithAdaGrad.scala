@@ -5,17 +5,9 @@ import breeze.util._
 
 import org.apache.spark.sql._
 import org.apache.spark.ml.feature.LabeledPoint
-
 import logit.optimizers._
 
-/**
-  * Estimate the logistic function through adaptive gradient descent (Duchi et al., 2010).
-  *    the objective function:      p(y|x,b) = 1/(1+exp(-b'x))
-  *    the adaptive learning rate:  b_t_i = b_t_i-1 - (eta / sqrt(sum(pow(gradient_ii, 2)) * gradient_ti)
-  *    regression with mle:         arg max_b sum(log p(y|x,b)-aR(b)) over m iterations,
-  * with R(b) the L2 regularization term R(b) = sum (pow(b,2)) for all n observations.
-  */
-
+/** Estimate the logistic function through adaptive gradient descent with L2 regularization. */
 class LogisticRegressionWithAdaGrad(spark: SparkSession, colNames: Array[String], training: Dataset[LabeledPoint], holdout: Dataset[LabeledPoint]) extends Regression
   with ModelEvaluation
   with FeatureSpace
@@ -63,7 +55,7 @@ class LogisticRegressionWithAdaGrad(spark: SparkSession, colNames: Array[String]
     holdOut.map { lp =>
       val features = new breeze.linalg.DenseVector[Double](lp.features.toArray)
       val evaluation = sigmoid(sum(features :* coefficients))
-      val prediction: Double = evaluation / (1 + evaluation) // TODO: intercept is missing
+      val prediction = evaluation / (1 + evaluation) // TODO: intercept is missing
       Prediction(observed = lp.label, predicted = prediction)
     }
   }

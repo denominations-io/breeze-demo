@@ -1,6 +1,7 @@
 import breeze.util._
-
 import org.apache.spark.sql._
+
+import java.io._
 
 case class Prediction(observed: Double, predicted: Double)
 
@@ -42,21 +43,34 @@ case class Evaluation(
                        evaluationMetrics: Map[String, Double] = Map.empty[String, Double],
                        coefficients: Array[Coefficient]
                      ) extends SerializableLogging {
-  def logSummary(): Unit = {
-    logger.info(
+  def generateSummary(fileName: String): Unit = {
+
+    val formattedCoefficients = coefficients.map { c =>
+        val variableName = c.variableName.size match {
+          case size if size <= 20   => c.variableName + " " * (20 - size)
+          case size if size > 20    => c.variableName.substring(0, 20)
+        }
+        s"$variableName | ${c.estimate.toString.substring(0,15)} |  ${c.probability}"
+      }
+
+    val eval =
       s"""
-         |
-         | -$description-
-         | evaluation set size:   ${evaluationSet.toString}
-         | number of variables:   ${numVariables.toString}
-         |
-         | -- evaluation metrics --
-         | ${evaluationMetrics.mkString("\n ")}
-         |
-         | --   variable name   ||   coefficient   ||   p-value --
-         | ${coefficients.map { c => s"${c.variableName}  |  ${c.estimate}  |  ${c.probability}"}.mkString("\n ")}
-       """.stripMargin
-    )
+       | Model evaluation, summary of the run.
+       | Model: $description
+       |
+       | evaluation set size:   ${evaluationSet.toString}
+       | number of variables:   ${numVariables.toString}
+       |
+       | ${evaluationMetrics.mkString("\n ")}
+       |
+       |   variable name          coefficient     p-value
+       | ${formattedCoefficients.mkString("\n ")}
+     """.stripMargin
+
+    new PrintWriter(new File(fileName)) {
+      write(eval)
+      close
+    }
   }
 }
 

@@ -10,7 +10,7 @@ class MLlibLinearRegressionWithSGDSpec extends FlatSpec with Matchers with DataR
   "The MLLibLinearRegressionWithSGD" should
     "be able to estimate and evaluate a linear regression" in {
     val model = new MLlibLinearRegressionWithSGD(colNames, trainingData, holdOutData)
-    model.evaluate.logSummary()
+    model.evaluate
   }
 
 }

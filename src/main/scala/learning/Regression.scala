@@ -1,4 +1,3 @@
-
 trait Regression {
   def description: String
   def estimate: ModelSummary

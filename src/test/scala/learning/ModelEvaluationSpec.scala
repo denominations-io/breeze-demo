@@ -1,7 +1,8 @@
 import org.apache.spark.sql._
 import org.scalatest._
+import java.io._
 
-class ModelEvaluationSpec extends FlatSpec with Matchers with DataReader with ModelEvaluation {
+class ModelEvaluationSpec extends FlatSpec with Matchers with DataReader with ModelEvaluation with BeforeAndAfterAll {
 
   val spark = SparkSession.builder().master("local[2]").appName("test-model-evaluation").getOrCreate()
   val (colNames, trainingData) = readCsv(spark, getClass.getResource("/train.csv").getPath)
@@ -23,7 +24,10 @@ class ModelEvaluationSpec extends FlatSpec with Matchers with DataReader with Mo
   it should "be able to produce a summary report with diagnostic data on the model run" in {
     val model = new LogisticRegressionWithAdaGrad(spark, colNames, trainingData, holdOutData)
     val evaluation = model.evaluate
-    evaluation.logSummary()
+    evaluation.generateSummary("res_evaluation_spec.txt")
   }
 
+  override def afterAll(): Unit = {
+    new File("res_evaluation_spec.txt").delete()
+  }
 }
