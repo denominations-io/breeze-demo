@@ -15,14 +15,14 @@ class MLlibLogisticRegressionWithSGD(colNames: Array[String], training: Dataset[
 
   val rdd = training.map { lp => (lp.label, org.apache.spark.mllib.linalg.Vectors.fromML(lp.features)) }.rdd
 
-  val logisticGradient = new LogisticGradient(2)
+  val logisticGradient = new LogisticGradient
   val l2Updater = new SquaredL2Updater
 
   val numVariables = rdd.take(1).map(_._2.size).head
   val initialWeights = org.apache.spark.mllib.linalg.Vectors.zeros(numVariables)
 
   val (parameterEstimates, loss) =
-    GradientDescent.runMiniBatchSGD(rdd, logisticGradient, l2Updater, 0.000001, 200, 4, 1, initialWeights, 1E-10)
+    GradientDescent.runMiniBatchSGD(rdd, logisticGradient, l2Updater, 8.5, 200, 4, 1, initialWeights, 1E-8)
 
   println(s"no of estimates: ${parameterEstimates.size}")
 
@@ -31,7 +31,7 @@ class MLlibLogisticRegressionWithSGD(colNames: Array[String], training: Dataset[
 
   override def estimate: ModelSummary = {
     val modelFit = ModelFit("num features", regression.numFeatures)
-    val coefficients = colNames.zipWithIndex.map { variable => Coefficient(variable._1, parameterEstimates(variable._2), 0.0)}
+    val coefficients = colNames.zipWithIndex.map { variable => Coefficient(variable._1, parameterEstimates(variable._2))}
     ModelSummary(description, modelFit, coefficients)
   }
 

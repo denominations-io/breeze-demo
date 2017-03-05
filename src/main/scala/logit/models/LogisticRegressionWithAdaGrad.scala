@@ -5,6 +5,7 @@ import breeze.util._
 
 import org.apache.spark.sql._
 import org.apache.spark.ml.feature.LabeledPoint
+
 import logit.optimizers._
 
 /** Estimate the logistic function through adaptive gradient descent with L2 regularization. */
@@ -41,13 +42,12 @@ class LogisticRegressionWithAdaGrad(spark: SparkSession, colNames: Array[String]
     def calculate(parameters: DenseVector[Double]) = (objectiveFunction(parameters), gradient(parameters))
   }
 
-  // TODO: compute the p values of the coefficients
   def estimate = {
     val optimizedParameters = optimizeAGD(regression, DenseVector.zeros[Double](numFeatures))
     logger.info(s"Parameter estimates after optimization: ${optimizedParameters.toString}")
 
     val fit = ModelFit("AIC", 0.0)
-    val estimates = optimizedParameters.data.zip(colNames).map(p => Coefficient(p._2, p._1, 0.0)).sortBy(-_.probability)
+    val estimates = optimizedParameters.data.zip(colNames).map(p => Coefficient(p._2, p._1))
     ModelSummary(description, fit, estimates)
   }
 

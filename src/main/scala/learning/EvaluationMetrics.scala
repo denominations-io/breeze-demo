@@ -24,7 +24,7 @@ trait EvaluationMetrics {
           case prob if prob > 0.5 => Prediction(prediction.observed, 1)
           case _                  => Prediction(prediction.observed, 0)
         }}
-        .filter { prediction => prediction.observed != prediction.predicted }
+        .filter { prediction => prediction.observed == prediction.predicted }
         .count()
       HitRate(truePositives, numPredictions - truePositives, truePositives.toDouble / numPredictions.toDouble )
   }

@@ -1,9 +1,14 @@
-import org.scalatest.prop._
 import breeze.linalg._
 
-trait PropertyTestingBase extends Checkers {
-  def minimizeCoefficients(init: DenseVector[Double], f: Evaluation) = {
+import org.scalacheck._
+import org.scalatest.prop._
+import org.scalacheck.Prop._
 
+trait PropertyTestingBase extends Properties with Checkers  {
 
-  }
+//  property("minimize coefficients") = {
+//    forAll { (minimized: List[DenseVector[Double]], coefficients: Evaluation) =>
+//      minimized.foreach { set => set.data.sum > coefficients.coefficients.map( _.estimate).sum }
+//    }
+//  }
 }

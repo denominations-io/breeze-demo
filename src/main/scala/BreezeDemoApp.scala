@@ -3,7 +3,7 @@ case class AppConfig(dataSet: String = "", algorithm: String = "logit-sgd", eval
 object BreezeDemoApp extends DataReader with ModelEvaluation {
   def main(args: Array[String]): Unit = {
 
-    val algorithm: Set[String] = Set("logit-sgd", "logit-adagrad", "linear-sgd")
+    val algorithm: Set[String] = Set("logit-sgd", "logit-lbgfs", "logit-adagrad", "linear-sgd")
     val parser = new scopt.OptionParser[AppConfig]("scopt") {
       opt[String]("dataset").action((x, c) => c.copy(dataSet = x))
         .required()
@@ -44,12 +44,15 @@ object BreezeDemoApp extends DataReader with ModelEvaluation {
       if (app.algorithm.equals("logit-adagrad")) {
         val logitAdaGrad = new LogisticRegressionWithAdaGrad(spark, colNames, trainingData, holdoutData)
         logitAdaGrad.evaluate.generateSummary(app.evaluationFile)
+      } else if(app.algorithm.equals("logit-lbgfs")) {
+        val logitLbfgs = new MLlibLogisticRegressionWithLBFGS(spark, colNames, trainingData, holdoutData)
+        logitLbfgs.evaluate.generateSummary(app.evaluationFile)
+      } else if(app.algorithm.equals("logit-sgd")){
+        val logitSgd = new MLlibLogisticRegressionWithSGD(colNames, trainingData, holdoutData)
+        logitSgd.evaluate.generateSummary(app.evaluationFile)
       } else if(app.algorithm.equals("linear-sgd")) {
         val linearSgd = new MLlibLinearRegressionWithSGD(colNames, trainingData, holdoutData)
         linearSgd.evaluate.generateSummary(app.evaluationFile)
-      } else {
-        val logitSgd = new MLlibLogisticRegressionWithSGD(colNames, trainingData, holdoutData)
-        logitSgd.evaluate.generateSummary(app.evaluationFile)
       }
     }
   }

@@ -1,11 +1,12 @@
-import breeze.util._
-import org.apache.spark.sql._
-
 import java.io._
+
+import org.apache.spark.sql._
+import org.apache.spark.mllib.evaluation._
+
+import breeze.util._
 
 case class Prediction(observed: Double, predicted: Double)
 
-// TODO: expand model evaluation suite
 trait ModelEvaluation extends FeatureSpace with EvaluationMetrics with SerializableLogging {
 
   def evaluateLinearPredictions(model: ModelSummary, predictions: Dataset[Prediction]): Evaluation = {
@@ -20,20 +21,22 @@ trait ModelEvaluation extends FeatureSpace with EvaluationMetrics with Serializa
   }
 
   def evaluateBinaryPredictions(model: ModelSummary, predictions: Dataset[Prediction]): Evaluation = {
-    val hitRate = computeHitRate(predictions)
+     val hitRate = computeHitRate(predictions)
+     val metrics = new BinaryClassificationMetrics(predictions.rdd.map { pred => (pred.observed, pred.predicted) } )
 
-   Evaluation(
-      description = model.name,
-      evaluationSet = predictions.count().toInt,
-      numVariables = model.coefficients.length,
-      evaluationMetrics = Map(
-        "True positives: " -> hitRate.truePositives,
-        "False positives: " -> hitRate.falsePositives,
-        "Hit rate (%): " -> hitRate.hitRate * 100
-      ),
-     coefficients = model.coefficients
-    )
-  }
+     Evaluation(
+        description = model.name,
+        evaluationSet = predictions.count().toInt,
+        numVariables = model.coefficients.length,
+        evaluationMetrics = Map(
+          "True positives: " -> hitRate.truePositives,
+          "False positives: " -> hitRate.falsePositives,
+          "Hit rate (%): " -> hitRate.hitRate * 100,
+          "Area under ROC curve: " -> metrics.areaUnderROC()
+        ),
+       coefficients = model.coefficients
+      )
+    }
 }
 
 case class Evaluation(
@@ -50,7 +53,7 @@ case class Evaluation(
           case size if size <= 20   => c.variableName + " " * (20 - size)
           case size if size > 20    => c.variableName.substring(0, 20)
         }
-        s"$variableName | ${c.estimate.toString.substring(0,15)} |  ${c.probability}"
+        s"$variableName | ${c.estimate.toString.substring(0, 15 )}"
       }
 
     val eval =
@@ -63,11 +66,13 @@ case class Evaluation(
        |
        | ${evaluationMetrics.mkString("\n ")}
        |
-       |   variable name          coefficient     p-value
+       |   variable name          coefficient
        | ${formattedCoefficients.mkString("\n ")}
      """.stripMargin
 
-    new PrintWriter(new File(fileName)) {
+    val file = new File(fileName)
+    if(fileName.contains("/")) file.getParentFile.mkdirs()
+    new PrintWriter(file) {
       write(eval)
       close
     }

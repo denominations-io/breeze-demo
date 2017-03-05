@@ -16,7 +16,7 @@ class AdaGradOptimizerSpec extends FlatSpec with Matchers with AdaGradOptimizer 
               val fullRange = 0 to 100
         }
 
-        // TODO: implement property-based testing
+        // TODO: implement property-based testing properly
         val optimized = optimizeAGD(f, parameters)
         optimized.length shouldEqual parameters.length
   }

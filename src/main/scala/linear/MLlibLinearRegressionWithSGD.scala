@@ -20,8 +20,7 @@ class MLlibLinearRegressionWithSGD(colNames: Array[String], training: Dataset[La
       colNames.zipWithIndex.map { variable =>
         Coefficient(
           variable._1,
-          summary.coefficientStandardErrors(variable._2),
-          summary.pValues(variable._2)
+          summary.coefficientStandardErrors(variable._2)
         )
       }
     ModelSummary(description, modelFit, coefficients)

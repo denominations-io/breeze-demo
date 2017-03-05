@@ -5,7 +5,7 @@ trait Regression {
 }
 
 case class ModelFit(metric: String, value: Double)
-case class Coefficient(variableName: String, estimate: Double, probability: Double)
+case class Coefficient(variableName: String, estimate: Double)
 
 case class ModelSummary(
                   name: String,
